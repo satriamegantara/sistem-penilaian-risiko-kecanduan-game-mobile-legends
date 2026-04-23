@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Penilaian Risiko Kecanduan Mobile Legends</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="48" height="48" rx="12" fill="url(#gradient)"/>
+                    <path d="M24 12L32 20H16L24 12Z" fill="white" fill-opacity="0.9"/>
+                    <path d="M16 20L24 28L32 20" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M12 28L24 40L36 28" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48">
+                            <stop stop-color="#667eea"/>
+                            <stop offset="1" stop-color="#764ba2"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <h1>Penilaian Risiko Kecanduan<br>Game Mobile Legends</h1>
+            <p class="subtitle">Sistem Fuzzy + Sistem Pakar</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Quiz Section -->
+            <section id="quiz-section" class="quiz-section active">
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <div class="progress-text" id="progress-text">Pertanyaan 1 dari 10</div>
+
+                <div class="question-container" id="question-container">
+                    <!-- Questions will be injected by JS -->
+                </div>
+
+                <div class="navigation">
+                    <button id="prev-btn" class="btn btn-secondary" disabled>
+                        <span>←</span> Sebelumnya
+                    </button>
+                    <button id="next-btn" class="btn btn-primary" disabled>
+                        Selanjutnya <span>→</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section id="result-section" class="result-section">
+                <div class="result-card">
+                    <div class="result-header">
+                        <h2>Hasil Penilaian Risiko</h2>
+                    </div>
+
+                    <div class="risk-gauge" id="risk-gauge">
+                        <div class="gauge-container">
+                            <div class="gauge-bg"></div>
+                            <div class="gauge-fill" id="gauge-fill"></div>
+                            <div class="gauge-needle" id="gauge-needle"></div>
+                        </div>
+                        <div class="risk-level" id="risk-level">RENDANG</div>
+                    </div>
+
+                    <div class="score-display">
+                        <span class="score-label">Skor Risiko</span>
+                        <span class="score-value" id="score-value">0</span>
+                        <span class="score-max">/ 100</span>
+                    </div>
+
+                    <div class="diagnosis-box" id="diagnosis-box">
+                        <h3>Diagnosis</h3>
+                        <p id="diagnosis-text"></p>
+                    </div>
+
+                    <div class="recommendations-box">
+                        <h3>Rekomendasi</h3>
+                        <ul id="recommendations-list"></ul>
+                    </div>
+
+                    <div class="rule-analysis">
+                        <h3>Analisis Rule-Based</h3>
+                        <div id="rule-analysis-content"></div>
+                    </div>
+
+                    <button id="restart-btn" class="btn btn-primary full-width">
+                        <span>🔄</span> Evaluasi Ulang
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Sistem Fuzzy Mamdani + Sistem Pakar</p>
+            <p class="small">Metode kecerdasan buatan untuk assessment kecanduan game</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
