@@ -288,6 +288,16 @@ function isMaxInput(inputs) {
   );
 }
 
+function isMinInput(inputs) {
+  return (
+    inputs.durasi <= Number(UI.inputs.durasi.min) &&
+    inputs.frekuensi <= Number(UI.inputs.frekuensi.min) &&
+    inputs.pengeluaran <= Number(UI.inputs.pengeluaran.min) &&
+    inputs.emosi <= Number(UI.inputs.emosi.min) &&
+    inputs.dampak <= Number(UI.inputs.dampak.min)
+  );
+}
+
 function tri(x, a, b, c) {
   if (x <= a || x >= c) {
     return 0;
@@ -398,22 +408,29 @@ function defuzzify(ruleEvaluations) {
 function computeFactorRisk(inputs) {
   return {
     durasi_risk: Number(
-      Math.min(100, (inputs.durasi / ranges.durasi.max) * 100).toFixed(1),
+      (((inputs.durasi - Number(UI.inputs.durasi.min)) /
+        (Number(UI.inputs.durasi.max) - Number(UI.inputs.durasi.min))) *
+        100).toFixed(1),
     ),
     frekuensi_risk: Number(
-      Math.min(100, (inputs.frekuensi / ranges.frekuensi.max) * 100).toFixed(1),
+      (((inputs.frekuensi - Number(UI.inputs.frekuensi.min)) /
+        (Number(UI.inputs.frekuensi.max) - Number(UI.inputs.frekuensi.min))) *
+        100).toFixed(1),
     ),
     pengeluaran_risk: Number(
-      Math.min(
-        100,
-        (inputs.pengeluaran / ranges.pengeluaran.max) * 100,
-      ).toFixed(1),
+      (((inputs.pengeluaran - Number(UI.inputs.pengeluaran.min)) /
+        (Number(UI.inputs.pengeluaran.max) - Number(UI.inputs.pengeluaran.min))) *
+        100).toFixed(1),
     ),
     emosi_risk: Number(
-      Math.min(100, (inputs.emosi / ranges.emosi.max) * 100).toFixed(1),
+      (((inputs.emosi - Number(UI.inputs.emosi.min)) /
+        (Number(UI.inputs.emosi.max) - Number(UI.inputs.emosi.min))) *
+        100).toFixed(1),
     ),
     dampak_risk: Number(
-      Math.min(100, (inputs.dampak / ranges.dampak.max) * 100).toFixed(1),
+      (((inputs.dampak - Number(UI.inputs.dampak.min)) /
+        (Number(UI.inputs.dampak.max) - Number(UI.inputs.dampak.min))) *
+        100).toFixed(1),
     ),
   };
 }
@@ -449,6 +466,25 @@ function inferRecommendations(category, dominantRules) {
 }
 
 function runAssessment(inputs) {
+  if (isMinInput(inputs)) {
+    const categoryInfo = getRiskCategory(0);
+    const factors = computeFactorRisk(inputs);
+
+    return {
+      tanggal: new Date().toLocaleString("id-ID"),
+      inputs,
+      fuzzyInput: fuzzify(inputs),
+      fuzzyScore: 0,
+      expertScore: 0,
+      skor: 0,
+      kategori: categoryInfo.key,
+      kategoriClass: categoryInfo.className,
+      detail: factors,
+      dominantRules: [],
+      recommendations: recommendationsByCategory.Rendah.slice(0, 3),
+    };
+  }
+
   const fuzzyInput = fuzzify(inputs);
   const ruleEvaluations = evaluateRules(fuzzyInput);
   const fuzzyScore = defuzzify(ruleEvaluations);
