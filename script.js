@@ -287,6 +287,12 @@ function tri(x, a, b, c) {
 }
 
 function trap(x, a, b, c, d) {
+  if (a === b && x === a) {
+    return 1;
+  }
+  if (c === d && x === d) {
+    return 1;
+  }
   if (x <= a || x >= d) {
     return 0;
   }
