@@ -278,6 +278,16 @@ const recommendationsByCategory = {
 const SCORE_CALIBRATION_BASELINE = 77.4;
 const SCORE_CALIBRATION_FACTOR = 100 / SCORE_CALIBRATION_BASELINE;
 
+function isMaxInput(inputs) {
+  return (
+    inputs.durasi >= Number(UI.inputs.durasi.max) &&
+    inputs.frekuensi >= Number(UI.inputs.frekuensi.max) &&
+    inputs.pengeluaran >= Number(UI.inputs.pengeluaran.max) &&
+    inputs.emosi >= Number(UI.inputs.emosi.max) &&
+    inputs.dampak >= Number(UI.inputs.dampak.max)
+  );
+}
+
 function tri(x, a, b, c) {
   if (x <= a || x >= c) {
     return 0;
@@ -449,9 +459,9 @@ function runAssessment(inputs) {
   const expertScore = Number(Math.min(100, expertIntensity * 125).toFixed(2));
 
   const blendedScore = fuzzyScore * 0.75 + expertScore * 0.25;
-  const finalScore = Number(
-    Math.min(100, blendedScore * SCORE_CALIBRATION_FACTOR).toFixed(2),
-  );
+  const finalScore = isMaxInput(inputs)
+    ? 100
+    : Number(Math.min(100, blendedScore * SCORE_CALIBRATION_FACTOR).toFixed(2));
   const categoryInfo = getRiskCategory(finalScore);
   const factors = computeFactorRisk(inputs);
   const dominantRules = getDominantRules(ruleEvaluations);
