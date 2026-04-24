@@ -1,103 +1,250 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Penilaian Risiko Kecanduan Mobile Legends</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <header class="header">
-            <div class="logo">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="48" height="48" rx="12" fill="url(#gradient)"/>
-                    <path d="M24 12L32 20H16L24 12Z" fill="white" fill-opacity="0.9"/>
-                    <path d="M16 20L24 28L32 20" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                    <path d="M12 28L24 40L36 28" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                    <defs>
-                        <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48">
-                            <stop stop-color="#667eea"/>
-                            <stop offset="1" stop-color="#764ba2"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
-            </div>
-            <h1>Penilaian Risiko Kecanduan<br>Game Mobile Legends</h1>
-            <p class="subtitle">Sistem Fuzzy + Sistem Pakar</p>
-        </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ML Addict Risk Assessment</title>
+    <meta
+      name="description"
+      content="Sistem fuzzy dan sistem pakar untuk penilaian risiko kecanduan Mobile Legends."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-layer bg-one"></div>
+    <div class="bg-layer bg-two"></div>
 
-        <main class="main-content">
-            <!-- Quiz Section -->
-            <section id="quiz-section" class="quiz-section active">
-                <div class="progress-container">
-                    <div class="progress-bar" id="progress-bar"></div>
-                </div>
-                <div class="progress-text" id="progress-text">Pertanyaan 1 dari 10</div>
+    <main class="app-shell">
+      <section id="welcome" class="card welcome-card active fade-in">
+        <p class="eyebrow">AI Practical Project</p>
+        <h1>ML Addict Risk Assessment</h1>
+        <p class="lead">
+          Sistem gabungan fuzzy logic dan expert system untuk menilai tingkat
+          risiko kecanduan game Mobile Legends berdasarkan pola bermain, emosi,
+          pengeluaran, dan dampaknya.
+        </p>
+        <ul class="pill-row" aria-label="Keunggulan sistem">
+          <li>Fuzzy Centroid</li>
+          <li>Rule-based Inference</li>
+          <li>Realtime Feedback</li>
+        </ul>
+        <div class="hero-metrics" aria-label="Ringkasan kemampuan sistem">
+          <article class="metric-card">
+            <p class="metric-label">Input Variabel</p>
+            <p class="metric-value">5 Faktor</p>
+          </article>
+          <article class="metric-card">
+            <p class="metric-label">Output Skor</p>
+            <p class="metric-value">0-100</p>
+          </article>
+          <article class="metric-card">
+            <p class="metric-label">Kategori Risiko</p>
+            <p class="metric-value">4 Level</p>
+          </article>
+        </div>
+        <button id="startBtn" class="btn btn-primary">Mulai Assessment</button>
+      </section>
 
-                <div class="question-container" id="question-container">
-                    <!-- Questions will be injected by JS -->
-                </div>
+      <section id="assessment" class="card hidden" aria-live="polite">
+        <div class="section-head">
+          <h2>Input Profil Bermain</h2>
+          <p>Geser indikator sesuai kebiasaan kamu saat ini.</p>
+        </div>
 
-                <div class="navigation">
-                    <button id="prev-btn" class="btn btn-secondary" disabled>
-                        <span>←</span> Sebelumnya
-                    </button>
-                    <button id="next-btn" class="btn btn-primary" disabled>
-                        Selanjutnya <span>→</span>
-                    </button>
-                </div>
-            </section>
+        <div class="progress-wrap" role="status" aria-live="polite">
+          <div class="progress-label-row">
+            <span>Kelengkapan</span>
+            <span id="progressText">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="progressBar" class="progress-fill"></div>
+          </div>
+        </div>
 
-            <!-- Result Section -->
-            <section id="result-section" class="result-section">
-                <div class="result-card">
-                    <div class="result-header">
-                        <h2>Hasil Penilaian Risiko</h2>
-                    </div>
+        <form id="assessmentForm" novalidate>
+          <div class="input-grid">
+            <article class="input-card">
+              <div class="input-title-row">
+                <h3>Durasi Bermain</h3>
+                <span id="durasiValue" class="value-badge">0 jam/hari</span>
+              </div>
+              <input
+                type="range"
+                id="durasi"
+                name="durasi"
+                min="0"
+                max="10"
+                step="0.5"
+                value="0"
+              />
+              <p class="hint">
+                Kategori: <strong id="durasiLabel">Low</strong>
+              </p>
+            </article>
 
-                    <div class="risk-gauge" id="risk-gauge">
-                        <div class="gauge-container">
-                            <div class="gauge-bg"></div>
-                            <div class="gauge-needle" id="gauge-needle"></div>
-                        </div>
-                        <div class="risk-level" id="risk-level">RENDANG</div>
-                    </div>
+            <article class="input-card">
+              <div class="input-title-row">
+                <h3>Frekuensi Main</h3>
+                <span id="frekuensiValue" class="value-badge"
+                  >1 hari/minggu</span
+                >
+              </div>
+              <input
+                type="range"
+                id="frekuensi"
+                name="frekuensi"
+                min="1"
+                max="7"
+                step="1"
+                value="1"
+              />
+              <p class="hint">
+                Kategori: <strong id="frekuensiLabel">Rare</strong>
+              </p>
+            </article>
 
-                    <div class="score-display">
-                        <span class="score-label">Skor Risiko</span>
-                        <span class="score-value" id="score-value">0</span>
-                        <span class="score-max">/ 100</span>
-                    </div>
+            <article class="input-card">
+              <div class="input-title-row">
+                <h3>Pengeluaran</h3>
+                <span id="pengeluaranValue" class="value-badge"
+                  >Rp0 / bulan</span
+                >
+              </div>
+              <input
+                type="range"
+                id="pengeluaran"
+                name="pengeluaran"
+                min="0"
+                max="500"
+                step="10"
+                value="0"
+              />
+              <p class="hint">
+                Kategori: <strong id="pengeluaranLabel">None</strong>
+              </p>
+            </article>
 
-                    <div class="diagnosis-box" id="diagnosis-box">
-                        <h3>Diagnosis</h3>
-                        <p id="diagnosis-text"></p>
-                    </div>
+            <article class="input-card">
+              <div class="input-title-row">
+                <h3>Emosi Negatif</h3>
+                <span id="emosiValue" class="value-badge">1 / 10</span>
+              </div>
+              <input
+                type="range"
+                id="emosi"
+                name="emosi"
+                min="1"
+                max="10"
+                step="1"
+                value="1"
+              />
+              <p class="hint">
+                Kategori: <strong id="emosiLabel">Calm</strong>
+              </p>
+            </article>
 
-                    <div class="recommendations-box">
-                        <h3>Rekomendasi</h3>
-                        <ul id="recommendations-list"></ul>
-                    </div>
+            <article class="input-card">
+              <div class="input-title-row">
+                <h3>Dampak ke Hidup</h3>
+                <span id="dampakValue" class="value-badge">1 / 10</span>
+              </div>
+              <input
+                type="range"
+                id="dampak"
+                name="dampak"
+                min="1"
+                max="10"
+                step="1"
+                value="1"
+              />
+              <p class="hint">
+                Kategori: <strong id="dampakLabel">No Impact</strong>
+              </p>
+            </article>
+          </div>
 
-                    <div class="rule-analysis">
-                        <h3>Analisis Rule-Based</h3>
-                        <div id="rule-analysis-content"></div>
-                    </div>
+          <div class="action-row">
+            <button type="submit" class="btn btn-primary">
+              Analisis Risiko
+            </button>
+            <button id="resetInputBtn" type="button" class="btn btn-secondary">
+              Reset Input
+            </button>
+          </div>
+        </form>
+      </section>
 
-                    <button id="restart-btn" class="btn btn-primary full-width">
-                        <span>🔄</span> Evaluasi Ulang
-                    </button>
-                </div>
-            </section>
-        </main>
+      <section id="processing" class="card hidden">
+        <h2>Analyzing...</h2>
+        <p>Sistem fuzzy dan rule expert sedang menghitung skor risiko kamu.</p>
+        <div class="loader-wrap" aria-hidden="true">
+          <div class="loader-ring"></div>
+        </div>
+        <p id="processingHint" class="mono">
+          Menyiapkan membership function...
+        </p>
+      </section>
 
-        <footer class="footer">
-            <p>Sistem Fuzzy Mamdani + Sistem Pakar</p>
-            <p class="small">Metode kecerdasan buatan untuk assessment kecanduan game</p>
-        </footer>
-    </div>
+      <section id="result" class="card hidden">
+        <div class="section-head">
+          <h2>Hasil Assessment</h2>
+          <p class="mono" id="resultDate">-</p>
+        </div>
+
+        <div class="score-panel">
+          <p class="score-caption">Skor Risiko</p>
+          <p class="score-value">
+            <span id="scoreValue">0</span><span class="score-max">/100</span>
+          </p>
+          <p id="riskCategory" class="risk-tag risk-low">Rendah</p>
+        </div>
+
+        <div class="meter-wrap" aria-label="Visual indikator risiko">
+          <div class="meter-track">
+            <div id="meterFill" class="meter-fill"></div>
+          </div>
+        </div>
+
+        <div class="result-grid">
+          <article class="result-card">
+            <h3>Profil Risiko Tiap Faktor</h3>
+            <div id="factorBars" class="factor-bars"></div>
+          </article>
+
+          <article class="result-card">
+            <h3>Aturan Paling Dominan</h3>
+            <ul id="topRules" class="rule-list"></ul>
+          </article>
+        </div>
+
+        <article class="result-card">
+          <h3>Rekomendasi Sistem</h3>
+          <ul id="recommendations" class="recommendation-list"></ul>
+        </article>
+
+        <div class="action-row">
+          <button id="retryBtn" class="btn btn-primary">Coba Lagi</button>
+          <button id="shareBtn" class="btn btn-secondary">Share Hasil</button>
+        </div>
+      </section>
+
+      <section id="history" class="card history-card hidden">
+        <div class="section-head compact">
+          <h2>Riwayat Assessment</h2>
+          <button id="clearHistoryBtn" class="btn btn-ghost">
+            Hapus Riwayat
+          </button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </main>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>

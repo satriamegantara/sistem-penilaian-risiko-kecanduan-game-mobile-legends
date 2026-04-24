@@ -1,602 +1,776 @@
-/**
- * ============================================
- * Sistem Penilaian Risiko Kecanduan Mobile Legends
- * Fuzzy Logic Engine (Mamdani) + Expert System
- * ============================================
- */
-
-// ============================================
-// DATA PERTANYAAN & FUZZY VARIABLES
-// ============================================
-
-const QUESTIONS = [
-    {
-        id: 1,
-        variable: 'durasi',
-        text: 'Dalam sehari, berapa jam kamu biasanya bermain Mobile Legends?',
-        variableText: 'Durasi Bermain',
-        answers: {
-            yes: { label: '> 3 jam', value: 4 },
-            no: { label: '< 3 jam', value: 2 }
-        }
-    },
-    {
-        id: 2,
-        variable: 'durasi',
-        text: 'Apakah kamu sering bermain Mobile Legends sampai larut malam (setelah jam 23:00)?',
-        variableText: 'Durasi Bermain',
-        answers: {
-            yes: { label: 'Ya', value: 4 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    },
-    {
-        id: 3,
-        variable: 'frekuensi',
-        text: 'Seberapa sering kamu bermain dalam seminggu?',
-        variableText: 'Frekuensi Bermain',
-        answers: {
-            yes: { label: '5-7 hari', value: 5 },
-            no: { label: '< 5 hari', value: 2 }
-        }
-    },
-    {
-        id: 4,
-        variable: 'frekuensi',
-        text: 'Apakah kamu merasa sulit untuk tidak membuka aplikasi game meski tidak ada notifikasi?',
-        variableText: 'Frekuensi Bermain',
-        answers: {
-            yes: { label: 'Ya', value: 4 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    },
-    {
-        id: 5,
-        variable: 'intensitas',
-        text: 'Saat bermain, apakah kamu merasa sangat fokus dan lupa waktu?',
-        variableText: 'Intensitas Bermain',
-        answers: {
-            yes: { label: 'Ya', value: 5 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    },
-    {
-        id: 6,
-        variable: 'intensitas',
-        text: 'Apakah kamu pernah melewatkan makan atau aktivitas penting karena sedang bermain?',
-        variableText: 'Intensitas Bermain',
-        answers: {
-            yes: { label: 'Ya', value: 5 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    },
-    {
-        id: 7,
-        variable: 'dampak',
-        text: 'Apakah nilai sekolah/kuliahmu menurun sejak mulai sering bermain?',
-        variableText: 'Dampak Negatif',
-        answers: {
-            yes: { label: 'Ya', value: 5 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    },
-    {
-        id: 8,
-        variable: 'dampak',
-        text: 'Apakah kamu sering bertengkar dengan keluarga karena terlalu fokus bermain?',
-        variableText: 'Dampak Sosial',
-        answers: {
-            yes: { label: 'Ya', value: 5 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    },
-    {
-        id: 9,
-        variable: 'dampak',
-        text: 'Apakah kamu merasa cemas atau marah saat tidak bisa bermain?',
-        variableText: 'Dampak Emosional',
-        answers: {
-            yes: { label: 'Ya', value: 5 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    },
-    {
-        id: 10,
-        variable: 'dampak',
-        text: 'Apakah kamu pernah berbohong kepada orang terdekat tentang durasi bermainmu?',
-        variableText: 'Perilaku Tersembunyi',
-        answers: {
-            yes: { label: 'Ya', value: 5 },
-            no: { label: 'Tidak', value: 1 }
-        }
-    }
-];
-
-// ============================================
-// FUZZY MEMBERSHIP FUNCTIONS
-// ============================================
-
-// Fungsi keanggotaan untuk setiap variabel
-// Menggunakan trapezoidal dan triangular membership functions
-
-const MembershipFunctions = {
-    /**
-     * Trapezoidal membership function
-     * @param {number} x - nilai input
-     * @param {number} a - start
-     * @param {number} b - peak start
-     * @param {number} c - peak end
-     * @param {number} d - end
-     */
-    trapezoidal(x, a, b, c, d) {
-        if (x <= a || x >= d) return 0;
-        if (x >= b && x <= c) return 1;
-        if (x > a && x < b) return (x - a) / (b - a);
-        if (x > c && x < d) return (d - x) / (d - c);
-        return 0;
-    },
-
-    /**
-     * Triangular membership function
-     * @param {number} x - nilai input
-     * @param {number} a - start
-     * @param {number} b - peak
-     * @param {number} c - end
-     */
-    triangular(x, a, b, c) {
-        return this.trapezoidal(x, a, b, b, c);
-    },
-
-    /**
-     * Membership function untuk DURASI (1-5)
-     * Rendah: 1-2.5, Sedang: 2-4, Tinggi: 3.5-5
-     */
-    durasi(x) {
-        return {
-            rendah: this.trapezoidal(x, 1, 1, 2.5, 3),
-            sedang: this.triangular(x, 2, 3.5, 5),
-            tinggi: this.trapezoidal(x, 3.5, 4.5, 5, 5)
-        };
-    },
-
-    /**
-     * Membership function untuk FREKUENSI (1-5)
-     * Rendah: 1-2.5, Sedang: 2-4, Tinggi: 3.5-5
-     */
-    frekuensi(x) {
-        return {
-            rendah: this.trapezoidal(x, 1, 1, 2.5, 3),
-            sedang: this.triangular(x, 2, 3.5, 5),
-            tinggi: this.trapezoidal(x, 3.5, 4.5, 5, 5)
-        };
-    },
-
-    /**
-     * Membership function untuk INTENSITAS (1-5)
-     * Rendah: 1-2.5, Sedang: 2-4, Tinggi: 3.5-5
-     */
-    intensitas(x) {
-        return {
-            rendah: this.trapezoidal(x, 1, 1, 2.5, 3),
-            sedang: this.triangular(x, 2, 3.5, 5),
-            tinggi: this.trapezoidal(x, 3.5, 4.5, 5, 5)
-        };
-    },
-
-    /**
-     * Membership function untuk DAMPAK (1-5)
-     * Ringan: 1-2.5, Sedang: 2-4, Berat: 3.5-5
-     */
-    dampak(x) {
-        return {
-            ringan: this.trapezoidal(x, 1, 1, 2.5, 3),
-            sedang: this.triangular(x, 2, 3.5, 5),
-            berat: this.trapezoidal(x, 3.5, 4.5, 5, 5)
-        };
-    }
+const STORAGE_KEYS = {
+  draft: "ml-risk-draft",
+  history: "ml-risk-history",
 };
 
-// ============================================
-// FUZZIFICATION
-// ============================================
+const UI = {
+  sections: {
+    welcome: document.getElementById("welcome"),
+    assessment: document.getElementById("assessment"),
+    processing: document.getElementById("processing"),
+    result: document.getElementById("result"),
+    history: document.getElementById("history"),
+  },
+  startBtn: document.getElementById("startBtn"),
+  form: document.getElementById("assessmentForm"),
+  resetInputBtn: document.getElementById("resetInputBtn"),
+  retryBtn: document.getElementById("retryBtn"),
+  shareBtn: document.getElementById("shareBtn"),
+  clearHistoryBtn: document.getElementById("clearHistoryBtn"),
+  processingHint: document.getElementById("processingHint"),
+  progressBar: document.getElementById("progressBar"),
+  progressText: document.getElementById("progressText"),
+  resultDate: document.getElementById("resultDate"),
+  scoreValue: document.getElementById("scoreValue"),
+  riskCategory: document.getElementById("riskCategory"),
+  meterFill: document.getElementById("meterFill"),
+  factorBars: document.getElementById("factorBars"),
+  topRules: document.getElementById("topRules"),
+  recommendations: document.getElementById("recommendations"),
+  historyList: document.getElementById("historyList"),
+  inputs: {
+    durasi: document.getElementById("durasi"),
+    frekuensi: document.getElementById("frekuensi"),
+    pengeluaran: document.getElementById("pengeluaran"),
+    emosi: document.getElementById("emosi"),
+    dampak: document.getElementById("dampak"),
+  },
+  valueBadges: {
+    durasi: document.getElementById("durasiValue"),
+    frekuensi: document.getElementById("frekuensiValue"),
+    pengeluaran: document.getElementById("pengeluaranValue"),
+    emosi: document.getElementById("emosiValue"),
+    dampak: document.getElementById("dampakValue"),
+  },
+  labels: {
+    durasi: document.getElementById("durasiLabel"),
+    frekuensi: document.getElementById("frekuensiLabel"),
+    pengeluaran: document.getElementById("pengeluaranLabel"),
+    emosi: document.getElementById("emosiLabel"),
+    dampak: document.getElementById("dampakLabel"),
+  },
+};
 
-function fuzzify(aggregatedScores) {
-    const fuzzyValues = {
-        durasi: MembershipFunctions.durasi(aggregatedScores.durasi),
-        frekuensi: MembershipFunctions.frekuensi(aggregatedScores.frekuensi),
-        intensitas: MembershipFunctions.intensitas(aggregatedScores.intensitas),
-        dampak: MembershipFunctions.dampak(aggregatedScores.dampak)
-    };
+const membershipDefs = {
+  durasi: {
+    low: (x) => trap(x, 0, 0, 1.5, 2.5),
+    medium: (x) => tri(x, 2, 3.5, 5),
+    high: (x) => tri(x, 4.5, 5.5, 6.8),
+    veryHigh: (x) => trap(x, 6, 7, 10, 10),
+  },
+  frekuensi: {
+    rare: (x) => trap(x, 1, 1, 2, 3),
+    regular: (x) => tri(x, 2, 3.5, 5),
+    frequent: (x) => tri(x, 4, 5.5, 7),
+    everyday: (x) => trap(x, 6, 6.6, 7, 7),
+  },
+  pengeluaran: {
+    none: (x) => trap(x, 0, 0, 10, 35),
+    low: (x) => tri(x, 15, 50, 90),
+    medium: (x) => tri(x, 70, 160, 250),
+    high: (x) => trap(x, 220, 300, 500, 500),
+  },
+  emosi: {
+    calm: (x) => trap(x, 1, 1, 2.5, 4),
+    neutral: (x) => tri(x, 3, 5, 7),
+    agitated: (x) => tri(x, 6.5, 7.8, 9),
+    veryAgitated: (x) => trap(x, 8.5, 9.2, 10, 10),
+  },
+  dampak: {
+    noImpact: (x) => trap(x, 1, 1, 2, 3),
+    minor: (x) => tri(x, 2.5, 4, 5),
+    moderate: (x) => tri(x, 4.5, 5.8, 7),
+    severe: (x) => trap(x, 6.5, 7.5, 10, 10),
+  },
+};
 
-    return fuzzyValues;
-}
+const outputTerms = {
+  rendah: (x) => trap(x, 0, 0, 20, 35),
+  sedang: (x) => tri(x, 28, 45, 62),
+  tinggi: (x) => tri(x, 58, 72, 86),
+  sangatTinggi: (x) => trap(x, 80, 88, 100, 100),
+};
 
-// ============================================
-// FUZZY RULES (EXPERT KNOWLEDGE BASE)
-// ============================================
-
-const FUZZY_RULES = [
-    // Rule 1-3: Semua tinggi
-    { durasi: 'tinggi', frekuensi: 'tinggi', intensitas: 'tinggi', dampak: 'berat', risiko: 'sangatTinggi', weight: 1.0 },
-    { durasi: 'tinggi', frekuensi: 'tinggi', intensitas: 'tinggi', dampak: 'sedang', risiko: 'sangatTinggi', weight: 0.9 },
-    { durasi: 'tinggi', frekuensi: 'tinggi', intensitas: 'tinggi', dampak: 'ringan', risiko: 'tinggi', weight: 0.8 },
-
-    // Rule 4-6: Durasi + Frekuensi tinggi
-    { durasi: 'tinggi', frekuensi: 'tinggi', intensitas: 'sedang', dampak: 'berat', risiko: 'sangatTinggi', weight: 0.9 },
-    { durasi: 'tinggi', frekuensi: 'tinggi', intensitas: 'sedang', dampak: 'sedang', risiko: 'tinggi', weight: 0.8 },
-    { durasi: 'tinggi', frekuensi: 'tinggi', intensitas: 'sedang', dampak: 'ringan', risiko: 'sedang', weight: 0.6 },
-
-    // Rule 7-9: Durasi + Dampak berat
-    { durasi: 'tinggi', frekuensi: 'sedang', intensitas: 'tinggi', dampak: 'berat', risiko: 'sangatTinggi', weight: 0.9 },
-    { durasi: 'tinggi', frekuensi: 'sedang', intensitas: 'tinggi', dampak: 'sedang', risiko: 'tinggi', weight: 0.8 },
-    { durasi: 'tinggi', frekuensi: 'sedang', intensitas: 'tinggi', dampak: 'ringan', risiko: 'sedang', weight: 0.5 },
-
-    // Rule 10-12: Durasi tinggi
-    { durasi: 'tinggi', frekuensi: 'sedang', intensitas: 'sedang', dampak: 'berat', risiko: 'tinggi', weight: 0.7 },
-    { durasi: 'tinggi', frekuensi: 'sedang', intensitas: 'sedang', dampak: 'sedang', risiko: 'sedang', weight: 0.5 },
-    { durasi: 'tinggi', frekuensi: 'sedang', intensitas: 'sedang', dampak: 'ringan', risiko: 'rendah', weight: 0.4 },
-
-    // Rule 13-15: Frekuensi + Intensitas tinggi
-    { durasi: 'sedang', frekuensi: 'tinggi', intensitas: 'tinggi', dampak: 'berat', risiko: 'sangatTinggi', weight: 0.85 },
-    { durasi: 'sedang', frekuensi: 'tinggi', intensitas: 'tinggi', dampak: 'sedang', risiko: 'tinggi', weight: 0.7 },
-    { durasi: 'sedang', frekuensi: 'tinggi', intensitas: 'tinggi', dampak: 'ringan', risiko: 'sedang', weight: 0.5 },
-
-    // Rule 16-18: Frekuensi tinggi
-    { durasi: 'sedang', frekuensi: 'tinggi', intensitas: 'sedang', dampak: 'berat', risiko: 'tinggi', weight: 0.7 },
-    { durasi: 'sedang', frekuensi: 'tinggi', intensitas: 'sedang', dampak: 'sedang', risiko: 'sedang', weight: 0.5 },
-    { durasi: 'sedang', frekuensi: 'tinggi', intensitas: 'sedang', dampak: 'ringan', risiko: 'rendah', weight: 0.3 },
-
-    // Rule 19-21: Dampak berat
-    { durasi: 'sedang', frekuensi: 'sedang', intensitas: 'tinggi', dampak: 'berat', risiko: 'tinggi', weight: 0.7 },
-    { durasi: 'sedang', frekuensi: 'sedang', intensitas: 'sedang', dampak: 'berat', risiko: 'sedang', weight: 0.5 },
-    { durasi: 'sedang', frekuensi: 'sedang', intensitas: 'rendah', dampak: 'berat', risiko: 'sedang', weight: 0.4 },
-
-    // Rule 22-24: Medium risk
-    { durasi: 'sedang', frekuensi: 'sedang', intensitas: 'sedang', dampak: 'sedang', risiko: 'rendah', weight: 0.3 },
-    { durasi: 'sedang', frekuensi: 'sedang', intensitas: 'tinggi', dampak: 'sedang', risiko: 'sedang', weight: 0.5 },
-    { durasi: 'sedang', frekuensi: 'sedang', intensitas: 'tinggi', dampak: 'ringan', risiko: 'rendah', weight: 0.3 },
-
-    // Rule 25-27: Rendah semua
-    { durasi: 'rendah', frekuensi: 'rendah', intensitas: 'rendah', dampak: 'ringan', risiko: 'rendah', weight: 1.0 },
-    { durasi: 'rendah', frekuensi: 'rendah', intensitas: 'rendah', dampak: 'sedang', risiko: 'rendah', weight: 0.7 },
-    { durasi: 'rendah', frekuensi: 'rendah', intensitas: 'rendah', dampak: 'berat', risiko: 'sedang', weight: 0.5 },
-
-    // Rule 28-30: Edge cases
-    { durasi: 'tinggi', frekuensi: 'rendah', intensitas: 'rendah', dampak: 'ringan', risiko: 'rendah', weight: 0.5 },
-    { durasi: 'rendah', frekuensi: 'tinggi', intensitas: 'rendah', dampak: 'ringan', risiko: 'rendah', weight: 0.5 },
-    { durasi: 'rendah', frekuensi: 'rendah', intensitas: 'tinggi', dampak: 'berat', risiko: 'sedang', weight: 0.6 }
+const rules = [
+  {
+    id: "R1",
+    description:
+      "Jika durasi tinggi dan frekuensi setiap hari maka risiko tinggi",
+    antecedents: [
+      { variable: "durasi", term: "high" },
+      { variable: "frekuensi", term: "everyday" },
+    ],
+    consequent: "tinggi",
+    weight: 0.9,
+  },
+  {
+    id: "R2",
+    description: "Jika durasi sangat tinggi maka risiko sangat tinggi",
+    antecedents: [{ variable: "durasi", term: "veryHigh" }],
+    consequent: "sangatTinggi",
+    weight: 1,
+  },
+  {
+    id: "R3",
+    description:
+      "Jika frekuensi sering dan pengeluaran medium maka risiko tinggi",
+    antecedents: [
+      { variable: "frekuensi", term: "frequent" },
+      { variable: "pengeluaran", term: "medium" },
+    ],
+    consequent: "tinggi",
+    weight: 0.86,
+  },
+  {
+    id: "R4",
+    description: "Jika emosi agitated dan dampak moderate maka risiko tinggi",
+    antecedents: [
+      { variable: "emosi", term: "agitated" },
+      { variable: "dampak", term: "moderate" },
+    ],
+    consequent: "tinggi",
+    weight: 0.88,
+  },
+  {
+    id: "R5",
+    description: "Jika emosi sangat agitated maka risiko sangat tinggi",
+    antecedents: [{ variable: "emosi", term: "veryAgitated" }],
+    consequent: "sangatTinggi",
+    weight: 0.97,
+  },
+  {
+    id: "R6",
+    description: "Jika dampak severe maka risiko sangat tinggi",
+    antecedents: [{ variable: "dampak", term: "severe" }],
+    consequent: "sangatTinggi",
+    weight: 0.98,
+  },
+  {
+    id: "R7",
+    description: "Jika durasi medium dan frekuensi regular maka risiko sedang",
+    antecedents: [
+      { variable: "durasi", term: "medium" },
+      { variable: "frekuensi", term: "regular" },
+    ],
+    consequent: "sedang",
+    weight: 0.78,
+  },
+  {
+    id: "R8",
+    description:
+      "Jika pengeluaran rendah dan frekuensi jarang maka risiko rendah",
+    antecedents: [
+      { variable: "pengeluaran", term: "low" },
+      { variable: "frekuensi", term: "rare" },
+    ],
+    consequent: "rendah",
+    weight: 0.72,
+  },
+  {
+    id: "R9",
+    description: "Jika dampak no impact dan emosi calm maka risiko rendah",
+    antecedents: [
+      { variable: "dampak", term: "noImpact" },
+      { variable: "emosi", term: "calm" },
+    ],
+    consequent: "rendah",
+    weight: 0.85,
+  },
+  {
+    id: "R10",
+    description:
+      "Jika pengeluaran tinggi dan frekuensi sering maka risiko sangat tinggi",
+    antecedents: [
+      { variable: "pengeluaran", term: "high" },
+      { variable: "frekuensi", term: "frequent" },
+    ],
+    consequent: "sangatTinggi",
+    weight: 0.91,
+  },
+  {
+    id: "R11",
+    description: "Jika durasi low dan frekuensi rare maka risiko rendah",
+    antecedents: [
+      { variable: "durasi", term: "low" },
+      { variable: "frekuensi", term: "rare" },
+    ],
+    consequent: "rendah",
+    weight: 0.8,
+  },
+  {
+    id: "R12",
+    description: "Jika durasi high dan dampak moderate maka risiko tinggi",
+    antecedents: [
+      { variable: "durasi", term: "high" },
+      { variable: "dampak", term: "moderate" },
+    ],
+    consequent: "tinggi",
+    weight: 0.83,
+  },
 ];
 
-// ============================================
-// INFERENCE ENGINE (MAMDANI METHOD)
-// ============================================
+const ranges = {
+  durasi: { max: 10, formatter: (v) => `${Number(v).toFixed(1)} jam/hari` },
+  frekuensi: { max: 7, formatter: (v) => `${Math.round(v)} hari/minggu` },
+  pengeluaran: { max: 500, formatter: (v) => `Rp${Math.round(v)}rb / bulan` },
+  emosi: { max: 10, formatter: (v) => `${Math.round(v)} / 10` },
+  dampak: { max: 10, formatter: (v) => `${Math.round(v)} / 10` },
+};
 
-function evaluateRule(fuzzyValues, rule) {
-    // Calculate minimum (AND operation) of all antecedents
-    const durasiMembership = fuzzyValues.durasi[rule.durasi] || 0;
-    const frekuensiMembership = fuzzyValues.frekuensi[rule.frekuensi] || 0;
-    const intensitasMembership = fuzzyValues.intensitas[rule.intensitas] || 0;
-    const dampakMembership = fuzzyValues.dampak[rule.dampak] || 0;
+const categoryMap = {
+  durasi: [
+    { label: "Low", test: (v) => v <= 2.5 },
+    { label: "Medium", test: (v) => v <= 5 },
+    { label: "High", test: (v) => v <= 6.8 },
+    { label: "Very High", test: () => true },
+  ],
+  frekuensi: [
+    { label: "Rare", test: (v) => v <= 2 },
+    { label: "Regular", test: (v) => v <= 4 },
+    { label: "Frequent", test: (v) => v <= 6 },
+    { label: "Everyday", test: () => true },
+  ],
+  pengeluaran: [
+    { label: "None", test: (v) => v <= 10 },
+    { label: "Low", test: (v) => v <= 60 },
+    { label: "Medium", test: (v) => v <= 220 },
+    { label: "High", test: () => true },
+  ],
+  emosi: [
+    { label: "Calm", test: (v) => v <= 3 },
+    { label: "Neutral", test: (v) => v <= 6 },
+    { label: "Agitated", test: (v) => v <= 8 },
+    { label: "Very Agitated", test: () => true },
+  ],
+  dampak: [
+    { label: "No Impact", test: (v) => v <= 2 },
+    { label: "Minor", test: (v) => v <= 4 },
+    { label: "Moderate", test: (v) => v <= 6 },
+    { label: "Severe", test: () => true },
+  ],
+};
 
-    // Minimum of all memberships
-    const firingStrength = Math.min(
-        durasiMembership,
-        frekuensiMembership,
-        intensitasMembership,
-        dampakMembership
+const recommendationsByCategory = {
+  Rendah: [
+    "Pertahankan pola bermain yang seimbang dengan rutinitas harian.",
+    "Tetapkan batas main harian agar tetap konsisten.",
+    "Lanjutkan aktivitas offline seperti olahraga atau belajar.",
+  ],
+  Sedang: [
+    "Kurangi sesi bermain di hari kerja dan buat jadwal pasti.",
+    "Batasi top up bulanan dengan nominal tetap.",
+    "Gunakan alarm pengingat untuk berhenti bermain tepat waktu.",
+  ],
+  Tinggi: [
+    "Lakukan game detox minimal 1-2 hari per minggu.",
+    "Alihkan waktu prime time ke kegiatan sosial atau produktif.",
+    "Diskusikan kebiasaan bermainmu dengan teman atau keluarga terdekat.",
+  ],
+  "Sangat Tinggi": [
+    "Nonaktifkan notifikasi game dan batasi akses pada jam tertentu.",
+    "Minta pendampingan orang terdekat untuk mengontrol waktu bermain.",
+    "Pertimbangkan konsultasi profesional bila game sudah mengganggu fungsi harian.",
+  ],
+};
+
+function tri(x, a, b, c) {
+  if (x <= a || x >= c) {
+    return 0;
+  }
+  if (x === b) {
+    return 1;
+  }
+  if (x < b) {
+    return (x - a) / (b - a);
+  }
+  return (c - x) / (c - b);
+}
+
+function trap(x, a, b, c, d) {
+  if (x <= a || x >= d) {
+    return 0;
+  }
+  if (x >= b && x <= c) {
+    return 1;
+  }
+  if (x > a && x < b) {
+    return (x - a) / (b - a || 1);
+  }
+  return (d - x) / (d - c || 1);
+}
+
+function getRiskCategory(score) {
+  if (score <= 30) {
+    return { key: "Rendah", className: "risk-low" };
+  }
+  if (score <= 60) {
+    return { key: "Sedang", className: "risk-medium" };
+  }
+  if (score <= 80) {
+    return { key: "Tinggi", className: "risk-high" };
+  }
+  return { key: "Sangat Tinggi", className: "risk-very-high" };
+}
+
+function getInputValues() {
+  return {
+    durasi: Number(UI.inputs.durasi.value),
+    frekuensi: Number(UI.inputs.frekuensi.value),
+    pengeluaran: Number(UI.inputs.pengeluaran.value),
+    emosi: Number(UI.inputs.emosi.value),
+    dampak: Number(UI.inputs.dampak.value),
+  };
+}
+
+function fuzzify(inputs) {
+  const fuzzy = {};
+  Object.keys(membershipDefs).forEach((variable) => {
+    fuzzy[variable] = {};
+    Object.keys(membershipDefs[variable]).forEach((term) => {
+      fuzzy[variable][term] = Number(
+        membershipDefs[variable][term](inputs[variable]).toFixed(4),
+      );
+    });
+  });
+  return fuzzy;
+}
+
+function evaluateRules(fuzzyInput) {
+  return rules.map((rule) => {
+    const alpha = Math.min(
+      ...rule.antecedents.map(
+        (antecedent) => fuzzyInput[antecedent.variable][antecedent.term],
+      ),
     );
-
-    // Apply rule weight
-    return firingStrength * rule.weight;
+    return {
+      ...rule,
+      alpha,
+      weightedAlpha: alpha * rule.weight,
+    };
+  });
 }
 
-function inference(fuzzyValues) {
-    let ruleOutputs = [];
+function defuzzify(ruleEvaluations) {
+  let numerator = 0;
+  let denominator = 0;
 
-    for (let i = 0; i < FUZZY_RULES.length; i++) {
-        const rule = FUZZY_RULES[i];
-        const firingStrength = evaluateRule(fuzzyValues, rule);
+  for (let x = 0; x <= 100; x += 1) {
+    let mu = 0;
+    ruleEvaluations.forEach((ruleEval) => {
+      const clipped = Math.min(
+        ruleEval.weightedAlpha,
+        outputTerms[ruleEval.consequent](x),
+      );
+      mu = Math.max(mu, clipped);
+    });
 
-        if (firingStrength > 0) {
-            ruleOutputs.push({
-                ruleIndex: i,
-                rule: rule,
-                firingStrength: firingStrength,
-                risiko: rule.risiko
-            });
-        }
-    }
+    numerator += x * mu;
+    denominator += mu;
+  }
 
-    return ruleOutputs;
+  if (denominator === 0) {
+    return 0;
+  }
+  return Number((numerator / denominator).toFixed(2));
 }
 
-// ============================================
-// DEFUZZIFICATION (CENTROID METHOD)
-// ============================================
-
-const RISK_VALUES = {
-    rendah: 25,
-    sedang: 50,
-    tinggi: 75,
-    sangatTinggi: 100
-};
-
-function defuzzify(ruleOutputs) {
-    if (ruleOutputs.length === 0) {
-        return { crispValue: 0, level: 'rendah' };
-    }
-
-    // Weighted average method
-    let sumWeightedOutput = 0;
-    let sumWeights = 0;
-
-    for (const output of ruleOutputs) {
-        const riskValue = RISK_VALUES[output.risiko];
-        sumWeightedOutput += output.firingStrength * riskValue;
-        sumWeights += output.firingStrength;
-    }
-
-    const crispValue = sumWeights > 0 ? sumWeightedOutput / sumWeights : 0;
-
-    // Determine risk level
-    let level = 'rendah';
-    if (crispValue >= 80) level = 'sangatTinggi';
-    else if (crispValue >= 60) level = 'tinggi';
-    else if (crispValue >= 40) level = 'sedang';
-    else level = 'rendah';
-
-    return { crispValue, level };
+function computeFactorRisk(inputs) {
+  return {
+    durasi_risk: Number(
+      Math.min(100, (inputs.durasi / ranges.durasi.max) * 100).toFixed(1),
+    ),
+    frekuensi_risk: Number(
+      Math.min(100, (inputs.frekuensi / ranges.frekuensi.max) * 100).toFixed(1),
+    ),
+    pengeluaran_risk: Number(
+      Math.min(
+        100,
+        (inputs.pengeluaran / ranges.pengeluaran.max) * 100,
+      ).toFixed(1),
+    ),
+    emosi_risk: Number(
+      Math.min(100, (inputs.emosi / ranges.emosi.max) * 100).toFixed(1),
+    ),
+    dampak_risk: Number(
+      Math.min(100, (inputs.dampak / ranges.dampak.max) * 100).toFixed(1),
+    ),
+  };
 }
 
-// ============================================
-// EXPERT SYSTEM (DIAGNOSIS & RECOMMENDATIONS)
-// ============================================
+function getDominantRules(evaluations, limit = 4) {
+  return evaluations
+    .filter((item) => item.weightedAlpha > 0)
+    .sort((a, b) => b.weightedAlpha - a.weightedAlpha)
+    .slice(0, limit);
+}
 
-const DIAGNOSIS_TEXT = {
-    sangatTinggi: `Berdasarkan hasil analisis fuzzy dan sistem pakar, kamu menunjukkan gejala kecanduan game Mobile Legends yang serius. "Game-playing disorder" telah diakui oleh WHO sebagai gangguan mental. Disarankan untuk segera mencari bantuan profesional dan melakukan intervensi untuk mengurangi waktu bermain.`,
-    tinggi: `Hasil assessment menunjukkan risiko kecanduan yang tinggi. Kamu menunjukkan perilaku gaming yang tidak sehat dengan dampak signifikan terhadap kehidupan sehari-hari. Sebaiknya mulai batasi waktu bermain dan cari alternatif aktivitas yang lebih positif.`,
-    sedang: `Kamu berada di zona risiko sedang. Meskipun belum kecanduan, beberapa perilaku gamingmu sudah menunjukkan tanda-tanda yang perlu diperhatikan. Disarankan untuk lebih sadar dan mulai mengatur waktu bermain dengan lebih bijaksana.`,
-    rendah: `Selamat! Kamu memiliki pola bermain game yang sehat dan seimbang. Kamu masih bisa menikmati Mobile Legends tanpa mengorbankan aspek penting dalam hidupmu. Terus pertahankan gaya hidup ini!`
-};
+function inferRecommendations(category, dominantRules) {
+  const base = recommendationsByCategory[category] || [];
+  const extra = [];
 
-const RECOMMENDATIONS = {
-    sangatTinggi: [
-        'Segera konsultasikan ke psikolog atau konselor profesional',
-        'Pertimbangkan untuk uninstall sementara atau blockade game',
-        'Beri tahu keluarga/ teman dekat agar membantu proses recovery',
-        'Cari aktivitas pengganti yang menstimulasi dopamin positif',
-        'Join komunitas recovery dari gaming addiction'
-    ],
-    tinggi: [
-        'Buat jadwal playing yang ketat dan patuhi',
-        'Set timer/alarm untuk mengingatkan berhenti main',
-        'Hapus atau batasi akses ke aplikasi game',
-        'Gunakan aplikasi screen-time monitoring',
-        'Tambahkan aktivitas positif: olahraga, hobi, belajar'
-    ],
-    sedang: [
-        'Tetapkan batas waktu bermain per hari (max 2 jam)',
-        'Hindari main saat sendirian terlalu lama',
-        'Cari teman playing yang memiliki pola sehat',
-        'Jaga keseimbangan: gaming, belajar, bersosialisasi',
-        'Perhatikan tanda-tanda awal kecanduan'
-    ],
-    rendah: [
-        'Pertahankan pola bermain yang sudah baik',
-        'Jangan ragu batasi waktu jika mulai terasa berlebihan',
-        'Gunakan fitur parental control jika perlu',
-        'Variasikan hobi di luar gaming',
-        'Tetap waspada dan self-aware terhadap waktu bermain'
-    ]
-};
+  if (dominantRules.some((rule) => rule.id === "R2" || rule.id === "R1")) {
+    extra.push(
+      "Durasi bermain menjadi sinyal utama, coba gunakan hard time limit harian.",
+    );
+  }
+  if (dominantRules.some((rule) => rule.id === "R5" || rule.id === "R6")) {
+    extra.push(
+      "Perhatikan regulasi emosi setelah kalah agar tidak memicu sesi bermain berulang.",
+    );
+  }
+  if (dominantRules.some((rule) => rule.id === "R10")) {
+    extra.push(
+      "Aktifkan batas transaksi bulanan untuk menahan pembelian impulsif di game.",
+    );
+  }
 
-// ============================================
-// APPLICATION STATE
-// ============================================
+  return [...new Set([...base, ...extra])].slice(0, 5);
+}
 
-let currentQuestion = 0;
-let answers = new Array(QUESTIONS.length).fill(null);
-let aggregatedScores = {
-    durasi: 0,
-    frekuensi: 0,
-    intensitas: 0,
-    dampak: 0
-};
+function runAssessment(inputs) {
+  const fuzzyInput = fuzzify(inputs);
+  const ruleEvaluations = evaluateRules(fuzzyInput);
+  const fuzzyScore = defuzzify(ruleEvaluations);
 
-// ============================================
-// DOM ELEMENTS
-// ============================================
+  const expertIntensity =
+    ruleEvaluations.reduce((sum, item) => sum + item.weightedAlpha, 0) /
+    Math.max(ruleEvaluations.length, 1);
+  const expertScore = Number(Math.min(100, expertIntensity * 125).toFixed(2));
 
-const quizSection = document.getElementById('quiz-section');
-const resultSection = document.getElementById('result-section');
-const questionContainer = document.getElementById('question-container');
-const progressBar = document.getElementById('progress-bar');
-const progressText = document.getElementById('progress-text');
-const prevBtn = document.getElementById('prev-btn');
-const nextBtn = document.getElementById('next-btn');
-const restartBtn = document.getElementById('restart-btn');
+  const finalScore = Number(
+    (fuzzyScore * 0.75 + expertScore * 0.25).toFixed(2),
+  );
+  const categoryInfo = getRiskCategory(finalScore);
+  const factors = computeFactorRisk(inputs);
+  const dominantRules = getDominantRules(ruleEvaluations);
+  const recommendations = inferRecommendations(categoryInfo.key, dominantRules);
 
-// ============================================
-// RENDER FUNCTIONS
-// ============================================
+  return {
+    tanggal: new Date().toLocaleString("id-ID"),
+    inputs,
+    fuzzyInput,
+    fuzzyScore,
+    expertScore,
+    skor: finalScore,
+    kategori: categoryInfo.key,
+    kategoriClass: categoryInfo.className,
+    detail: factors,
+    dominantRules,
+    recommendations,
+  };
+}
 
-function renderQuestion() {
-    const q = QUESTIONS[currentQuestion];
-    const answerValue = answers[currentQuestion];
+function setSectionVisible(id) {
+  Object.keys(UI.sections).forEach((key) => {
+    UI.sections[key].classList.toggle("hidden", key !== id);
+    UI.sections[key].classList.toggle("active", key === id);
+  });
+}
 
-    questionContainer.innerHTML = `
-        <div class="question-card">
-            <span class="question-number">${q.variableText}</span>
-            <p class="question-text">${q.text}</p>
-            <div class="answer-options">
-                <button class="answer-btn ${answerValue === 0 ? 'selected selected-no' : ''}"
-                        onclick="selectAnswer(0)">
-                    <span>✗</span> Tidak
-                </button>
-                <button class="answer-btn ${answerValue === 1 ? 'selected selected-yes' : ''}"
-                        onclick="selectAnswer(1)">
-                    <span>✓</span> Ya
-                </button>
-            </div>
-        </div>
+function getCategoryLabel(variable, value) {
+  return categoryMap[variable].find((item) => item.test(value)).label;
+}
+
+function updateProgress(inputs) {
+  const percentages = Object.keys(inputs).map((variable) => {
+    const min = Number(UI.inputs[variable].min);
+    const max = Number(UI.inputs[variable].max);
+    return ((inputs[variable] - min) / (max - min)) * 100;
+  });
+
+  const progress = Number(
+    (percentages.reduce((a, b) => a + b, 0) / percentages.length).toFixed(0),
+  );
+  UI.progressBar.style.width = `${progress}%`;
+  UI.progressText.textContent = `${progress}%`;
+}
+
+function updateInputVisuals() {
+  const values = getInputValues();
+
+  UI.valueBadges.durasi.textContent = ranges.durasi.formatter(values.durasi);
+  UI.valueBadges.frekuensi.textContent = ranges.frekuensi.formatter(
+    values.frekuensi,
+  );
+  UI.valueBadges.pengeluaran.textContent = ranges.pengeluaran.formatter(
+    values.pengeluaran,
+  );
+  UI.valueBadges.emosi.textContent = ranges.emosi.formatter(values.emosi);
+  UI.valueBadges.dampak.textContent = ranges.dampak.formatter(values.dampak);
+
+  UI.labels.durasi.textContent = getCategoryLabel("durasi", values.durasi);
+  UI.labels.frekuensi.textContent = getCategoryLabel(
+    "frekuensi",
+    values.frekuensi,
+  );
+  UI.labels.pengeluaran.textContent = getCategoryLabel(
+    "pengeluaran",
+    values.pengeluaran,
+  );
+  UI.labels.emosi.textContent = getCategoryLabel("emosi", values.emosi);
+  UI.labels.dampak.textContent = getCategoryLabel("dampak", values.dampak);
+
+  updateProgress(values);
+  saveDraft(values);
+}
+
+function animateCounter(targetValue) {
+  const duration = 1000;
+  const startTime = performance.now();
+
+  function tick(now) {
+    const elapsed = now - startTime;
+    const ratio = Math.min(1, elapsed / duration);
+    const current = Math.round(targetValue * (1 - (1 - ratio) * (1 - ratio)));
+    UI.scoreValue.textContent = String(current);
+
+    if (ratio < 1) {
+      requestAnimationFrame(tick);
+    }
+  }
+
+  requestAnimationFrame(tick);
+}
+
+function renderFactorBars(detail) {
+  UI.factorBars.innerHTML = "";
+
+  const labels = {
+    durasi_risk: "Durasi",
+    frekuensi_risk: "Frekuensi",
+    pengeluaran_risk: "Pengeluaran",
+    emosi_risk: "Emosi",
+    dampak_risk: "Dampak",
+  };
+
+  Object.keys(detail).forEach((key) => {
+    const wrap = document.createElement("div");
+    wrap.className = "factor-item";
+
+    wrap.innerHTML = `
+      <div class="factor-top">
+        <span>${labels[key]}</span>
+        <span class="mono">${detail[key]}%</span>
+      </div>
+      <div class="factor-track">
+        <div class="factor-fill" style="width:${detail[key]}%"></div>
+      </div>
     `;
 
-    // Update progress
-    const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100;
-    progressBar.style.width = `${progress}%`;
-    progressText.textContent = `Pertanyaan ${currentQuestion + 1} dari ${QUESTIONS.length}`;
-
-    // Update buttons
-    prevBtn.disabled = currentQuestion === 0;
-    nextBtn.disabled = answers[currentQuestion] === null;
+    UI.factorBars.appendChild(wrap);
+  });
 }
 
-function selectAnswer(value) {
-    answers[currentQuestion] = value;
-    renderQuestion();
+function renderRules(ruleList) {
+  UI.topRules.innerHTML = "";
+
+  if (ruleList.length === 0) {
+    const li = document.createElement("li");
+    li.textContent =
+      "Tidak ada rule dominan, gunakan input yang lebih representatif.";
+    UI.topRules.appendChild(li);
+    return;
+  }
+
+  ruleList.forEach((rule) => {
+    const li = document.createElement("li");
+    li.textContent = `${rule.id} (${(rule.weightedAlpha * 100).toFixed(1)}%): ${rule.description}`;
+    UI.topRules.appendChild(li);
+  });
 }
 
-function goToQuestion(index) {
-    if (index >= 0 && index < QUESTIONS.length) {
-        currentQuestion = index;
-        renderQuestion();
+function renderRecommendations(list) {
+  UI.recommendations.innerHTML = "";
+  list.forEach((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    UI.recommendations.appendChild(li);
+  });
+}
+
+function showResult(result) {
+  setSectionVisible("result");
+  UI.sections.history.classList.remove("hidden");
+
+  UI.resultDate.textContent = `${result.tanggal} | Fuzzy ${result.fuzzyScore} | Expert ${result.expertScore}`;
+  UI.riskCategory.textContent = result.kategori;
+  UI.riskCategory.className = `risk-tag ${result.kategoriClass}`;
+
+  UI.meterFill.style.width = "0%";
+  setTimeout(() => {
+    UI.meterFill.style.width = `${result.skor}%`;
+  }, 60);
+
+  animateCounter(Math.round(result.skor));
+  renderFactorBars(result.detail);
+  renderRules(result.dominantRules);
+  renderRecommendations(result.recommendations);
+  saveToHistory(result);
+  renderHistory();
+}
+
+function saveDraft(inputs) {
+  localStorage.setItem(STORAGE_KEYS.draft, JSON.stringify(inputs));
+}
+
+function loadDraft() {
+  const raw = localStorage.getItem(STORAGE_KEYS.draft);
+  if (!raw) {
+    return;
+  }
+
+  try {
+    const draft = JSON.parse(raw);
+    Object.keys(UI.inputs).forEach((key) => {
+      if (draft[key] !== undefined) {
+        UI.inputs[key].value = draft[key];
+      }
+    });
+  } catch (_err) {
+    localStorage.removeItem(STORAGE_KEYS.draft);
+  }
+}
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || "[]");
+  } catch (_err) {
+    return [];
+  }
+}
+
+function saveToHistory(result) {
+  const current = loadHistory();
+  const compact = {
+    tanggal: result.tanggal,
+    skor: result.skor,
+    kategori: result.kategori,
+  };
+
+  const updated = [compact, ...current].slice(0, 6);
+  localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(updated));
+}
+
+function renderHistory() {
+  const data = loadHistory();
+  UI.historyList.innerHTML = "";
+
+  if (data.length === 0) {
+    UI.historyList.innerHTML = "<p>Belum ada assessment tersimpan.</p>";
+    return;
+  }
+
+  data.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "history-item";
+    div.innerHTML = `
+      <span class="mono">${item.tanggal}</span>
+      <strong>${item.skor} (${item.kategori})</strong>
+    `;
+    UI.historyList.appendChild(div);
+  });
+}
+
+function runProcessingSequence(inputs) {
+  const hints = [
+    "Menyiapkan membership function...",
+    "Evaluasi rule base pakar...",
+    "Defuzzification centroid...",
+    "Menyusun rekomendasi personal...",
+  ];
+
+  setSectionVisible("processing");
+  let idx = 0;
+
+  const timer = setInterval(() => {
+    UI.processingHint.textContent = hints[idx] || hints[hints.length - 1];
+    idx += 1;
+  }, 320);
+
+  setTimeout(() => {
+    clearInterval(timer);
+    const result = runAssessment(inputs);
+    showResult(result);
+  }, 1400);
+}
+
+async function shareResult() {
+  const category = UI.riskCategory.textContent;
+  const score = UI.scoreValue.textContent;
+  const shareText = `Skor risiko kecanduan ML saya: ${score}/100 (${category}).`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "ML Addict Risk Assessment",
+        text: shareText,
+      });
+      return;
+    } catch (_err) {
+      return;
     }
+  }
+
+  try {
+    await navigator.clipboard.writeText(shareText);
+    alert("Hasil disalin ke clipboard.");
+  } catch (_err) {
+    alert("Share belum didukung browser ini.");
+  }
 }
 
-// ============================================
-// AGGREGATION & FUZZY PROCESSING
-// ============================================
-
-function aggregateScores() {
-    let durasiScore = 0, frekuensiScore = 0, intensitasScore = 0, dampakScore = 0;
-    let durasiCount = 0, frekuensiCount = 0, intensitasCount = 0, dampakCount = 0;
-
-    for (let i = 0; i < QUESTIONS.length; i++) {
-        const q = QUESTIONS[i];
-        const answer = answers[i];
-
-        if (answer === null) continue;
-
-        // answer 1 = Ya (tinggi), answer 0 = Tidak (rendah)
-        const scoreValue = answer === 1 ? q.answers.yes.value : q.answers.no.value;
-
-        switch (q.variable) {
-            case 'durasi':
-                durasiScore += scoreValue;
-                durasiCount++;
-                break;
-            case 'frekuensi':
-                frekuensiScore += scoreValue;
-                frekuensiCount++;
-                break;
-            case 'intensitas':
-                intensitasScore += scoreValue;
-                intensitasCount++;
-                break;
-            case 'dampak':
-                dampakScore += scoreValue;
-                dampakCount++;
-                break;
-        }
-    }
-
-    // Normalize to 1-5 scale
-    aggregatedScores = {
-        durasi: durasiCount > 0 ? (durasiScore / durasiCount) : 1,
-        frekuensi: frekuensiCount > 0 ? (frekuensiScore / frekuensiCount) : 1,
-        intensitas: intensitasCount > 0 ? (intensitasScore / intensitasCount) : 1,
-        dampak: dampakCount > 0 ? (dampakScore / dampakCount) : 1
-    };
-
-    return aggregatedScores;
+function resetInputs() {
+  UI.form.reset();
+  UI.inputs.durasi.value = 0;
+  UI.inputs.frekuensi.value = 1;
+  UI.inputs.pengeluaran.value = 0;
+  UI.inputs.emosi.value = 1;
+  UI.inputs.dampak.value = 1;
+  updateInputVisuals();
 }
 
-// ============================================
-// RESULT RENDERING
-// ============================================
+function bindEvents() {
+  UI.startBtn.addEventListener("click", () => {
+    setSectionVisible("assessment");
+    UI.sections.history.classList.remove("hidden");
+    UI.sections.assessment.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
 
-function showResult() {
-    // Process fuzzy logic
-    const scores = aggregateScores();
-    const fuzzyValues = fuzzify(scores);
-    const ruleOutputs = inference(fuzzyValues);
-    const { crispValue, level } = defuzzify(ruleOutputs);
+  Object.values(UI.inputs).forEach((input) => {
+    input.addEventListener("input", updateInputVisuals);
+  });
 
-    // Hide quiz, show result
-    quizSection.classList.remove('active');
-    resultSection.classList.add('active');
+  UI.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    runProcessingSequence(getInputValues());
+  });
 
-    // Update risk level display
-    const riskLevelEl = document.getElementById('risk-level');
-    const levelLabels = {
-        rendah: 'RENDANG',
-        sedang: 'SEDANG',
-        tinggi: 'TINGGI',
-        sangatTinggi: 'SANGAT TINGGI'
-    };
-    riskLevelEl.textContent = levelLabels[level] || level.toUpperCase();
-    riskLevelEl.className = `risk-level ${level.replace('sangatTinggi', 'sangat-tinggi')}`;
+  UI.resetInputBtn.addEventListener("click", resetInputs);
 
-    // Update score
-    document.getElementById('score-value').textContent = Math.round(crispValue);
+  UI.retryBtn.addEventListener("click", () => {
+    setSectionVisible("assessment");
+    UI.sections.assessment.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
 
-    // Update diagnosis
-    document.getElementById('diagnosis-text').textContent = DIAGNOSIS_TEXT[level];
+  UI.shareBtn.addEventListener("click", shareResult);
 
-    // Update recommendations
-    const recList = document.getElementById('recommendations-list');
-    recList.innerHTML = RECOMMENDATIONS[level]
-        .map(rec => `<li>${rec}</li>`)
-        .join('');
-
-    // Update rule analysis
-    const ruleContent = document.getElementById('rule-analysis-content');
-    const activeRules = ruleOutputs
-        .sort((a, b) => b.firingStrength - a.firingStrength)
-        .slice(0, 5);
-
-    ruleContent.innerHTML = activeRules.map(rule => `
-        <div class="rule-item active">
-            <div class="rule-label">Rule #${rule.ruleIndex + 1} (strength: ${(rule.firingStrength * 100).toFixed(1)}%)</div>
-            IF durasi=${rule.rule.durasi} AND frekuensi=${rule.rule.frekuensi}
-            AND intensitas=${rule.rule.intensitas} AND dampak=${rule.rule.dampak}
-            <div class="rule-result">THEN risiko=${rule.risiko}</div>
-        </div>
-    `).join('');
-
-    // Animate gauge needle
-    const gaugeNeedle = document.getElementById('gauge-needle');
-    // Rotate from -90deg (0%) to 90deg (100%)
-    const rotation = -90 + (crispValue / 100) * 180;
-    gaugeNeedle.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+  UI.clearHistoryBtn.addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_KEYS.history);
+    renderHistory();
+  });
 }
 
-function restart() {
-    currentQuestion = 0;
-    answers = new Array(QUESTIONS.length).fill(null);
-    aggregatedScores = { durasi: 0, frekuensi: 0, intensitas: 0, dampak: 0 };
-
-    resultSection.classList.remove('active');
-    quizSection.classList.add('active');
-    renderQuestion();
+function init() {
+  loadDraft();
+  updateInputVisuals();
+  renderHistory();
+  bindEvents();
 }
 
-// ============================================
-// EVENT LISTENERS
-// ============================================
-
-prevBtn.addEventListener('click', () => goToQuestion(currentQuestion - 1));
-nextBtn.addEventListener('click', () => {
-    if (currentQuestion < QUESTIONS.length - 1) {
-        goToQuestion(currentQuestion + 1);
-    } else {
-        showResult();
-    }
-});
-restartBtn.addEventListener('click', restart);
-
-// ============================================
-// INITIALIZE
-// ============================================
-
-renderQuestion();
+init();
