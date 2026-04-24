@@ -273,6 +273,11 @@ const recommendationsByCategory = {
   ],
 };
 
+// Blended score dari engine ini cenderung konservatif, jadi hasil akhir
+// dikalibrasi ke skala 0-100 agar input ekstrem benar-benar mencapai 100.
+const SCORE_CALIBRATION_BASELINE = 77.4;
+const SCORE_CALIBRATION_FACTOR = 100 / SCORE_CALIBRATION_BASELINE;
+
 function tri(x, a, b, c) {
   if (x <= a || x >= c) {
     return 0;
@@ -443,8 +448,9 @@ function runAssessment(inputs) {
     Math.max(ruleEvaluations.length, 1);
   const expertScore = Number(Math.min(100, expertIntensity * 125).toFixed(2));
 
+  const blendedScore = fuzzyScore * 0.75 + expertScore * 0.25;
   const finalScore = Number(
-    (fuzzyScore * 0.75 + expertScore * 0.25).toFixed(2),
+    Math.min(100, blendedScore * SCORE_CALIBRATION_FACTOR).toFixed(2),
   );
   const categoryInfo = getRiskCategory(finalScore);
   const factors = computeFactorRisk(inputs);
